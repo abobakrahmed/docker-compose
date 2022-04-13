@@ -1,0 +1,56 @@
+version: '3.6'
+
+services:
+
+  postgres:
+    image: postgres
+    command: postgres -c 'max_connections=200'
+    restart: always
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+      - POSTGRES_DB=sonarqube
+    volumes:
+      - /opt/postgres/data:/var/lib/postgresql/data
+    networks:
+      - sonar
+    expose:
+      - 5432
+
+  sonar:
+    image: sonarqube
+    restart: always
+    volumes:
+      - /opt/sonarqube/conf-new:/opt/sonarqube/conf:rw
+      - /opt/sonarqube/data-new:/opt/sonarqube/data:rw
+      - /opt/sonarqube/logs-new:/opt/sonarqube/logs:rw
+      - /opt/sonarqube/extensions-new:/opt/sonarqube/extensions:rw
+    environment:
+      - sonar.jdbc.url=jdbc:postgresql://postgres/sonarqube
+      - sonar.jdbc.username=sonar
+      - sonar.jdbc.password=Paymob!@#2020
+    depends_on:
+      - postgres
+    networks:
+      - sonar
+    expose:
+      - 9000
+      - 50022
+
+  nginx:
+    image: nginx:1.16.1
+    restart: always
+    volumes:
+      - /etc/nginx/nginx.conf:/etc/nginx/nginx.conf:rw
+      - /etc/letsencrypt/live/sonar.iotblue.io/fullchain.pem:/etc/letsencrypt/live/sonar.iotblue.io/fullchain.pem:rw
+      - /etc/letsencrypt/live/sonar.iotblue.io/privkey.pem:/etc/letsencrypt/live/sonar.iotblue.io/privkey.pem:rw
+    networks:
+      - hub
+    depends_on:
+      - nexus
+      - sonar
+    ports:
+      - 443:443
+
+networks:
+  sonar:
